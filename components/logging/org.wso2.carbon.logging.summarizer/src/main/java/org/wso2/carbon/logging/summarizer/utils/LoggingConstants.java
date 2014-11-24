@@ -134,6 +134,9 @@ public final class LoggingConstants {
         public static final String RETRY_DOWNED_HOSTS_ENABLE = "enable";
         public static final String RETRY_DOWNED_HOSTS_QUEUE = "queueSize";
         public static final String AUTO_DISCOVERY = "cassandraAutoDiscovery";
+        public static final String SECRET_ALIAS_PASSWORD = "Summarizer.LoggingConfig.Password";
+        public static final String SECRET_ALIAS_PUBLISHER_PASSWORD = "Summarizer.LoggingConfig.PublisherPassword";
+        public static final String SECRET_ALIAS_BAM_PASSWORD =  "Summarizer.LoggingConfig.BamPassword";
     }
 
     public static final class BamProperties{
