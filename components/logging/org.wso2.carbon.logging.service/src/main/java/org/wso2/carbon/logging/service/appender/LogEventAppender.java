@@ -285,6 +285,8 @@ public class LogEventAppender extends AppenderSkeleton implements Appender, Logg
             } else {
                 decryptedValue = value;
             }
+        } else {
+	        decryptedValue = value;
         }
         return decryptedValue;
     }
