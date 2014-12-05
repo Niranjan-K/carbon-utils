@@ -24,6 +24,8 @@ import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
 import org.wso2.carbon.registry.core.RegistryConstants;
 import org.wso2.carbon.utils.CarbonUtils;
+import org.wso2.securevault.SecretResolver
+import org.wso2.securevault.SecretResolverFactory;
 
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLInputFactory;
@@ -40,6 +42,7 @@ public class LoggingConfigManager {
     private static final Log log = LogFactory.getLog(LoggingConfigManager.class);
     private static LoggingConfigManager cassandraConfig;
     private static BundleContext bundleContext;
+    private static SecretResolver secretResolver;
 
     public static LoggingConfigManager getCassandraConfig() {
         return cassandraConfig;
@@ -129,6 +132,7 @@ public class LoggingConfigManager {
             String configFilename) {
         LoggingConfig config = new LoggingConfig();
         InputStream inputStream = null;
+        String secretAlias = "";
         try {
             inputStream = new LoggingConfigManager()
                     .getInputStream(configFilename);
@@ -142,6 +146,7 @@ public class LoggingConfigManager {
                         .createXMLStreamReader(inputStream);
                 StAXOMBuilder builder = new StAXOMBuilder(parser);
                 OMElement documentElement = builder.getDocumentElement();
+                secretResolver = SecretResolverFactory.create(documentElement, true);
                 @SuppressWarnings("rawtypes")
                 Iterator it = documentElement.getChildElements();
                 while (it.hasNext()) {
@@ -170,7 +175,13 @@ public class LoggingConfigManager {
                         config.setCassUsername(element.getText());
                     } else if (LoggingConstants.CassandraConfigProperties.PASSWORD
                             .equals(element.getLocalName())) {
-                        config.setCassPassword(element.getText());
+                        secretAlias = LoggingConstants.CassandraConfigProperties.SECRET_ALIAS_PASSWORD;
+                        if (secretResolver != null && secretResolver.isInitialized()
+                                && secretResolver.isTokenProtected(secretAlias)) {
+                            config.setCassPassword(secretResolver.resolve(secretAlias));
+                        } else {
+                            config.setCassPassword(element.getText());
+                        }
                     } else if (LoggingConstants.CassandraConfigProperties.CONSISTENCY_LEVEL
                             .equals(element.getLocalName())) {
                         config.setConsistencyLevel(element.getText());
@@ -228,7 +239,13 @@ public class LoggingConfigManager {
                         config.setPublisherUser(element.getText());
                     } else if (LoggingConstants.CassandraConfigProperties.PUBLISHER_PASSWORD
                             .equals(element.getLocalName())) {
-                        config.setPublisherPassword(element.getText());
+                        secretAlias = LoggingConstants.CassandraConfigProperties.SECRET_ALIAS_PUBLISHER_PASSWORD;
+                        if (secretResolver != null && secretResolver.isInitialized()
+                                && secretResolver.isTokenProtected(secretAlias)) {
+                            config.setPublisherPassword(secretResolver.resolve(secretAlias));
+                        } else {
+                            config.setPublisherPassword(element.getText());
+                        }
                     } else if (LoggingConstants.CassandraConfigProperties.CRON_EXPRESSION
                             .equals(element.getLocalName())) {
                         config.setCronExpression(element.getText());
@@ -254,7 +271,13 @@ public class LoggingConfigManager {
                     }
                      else if (LoggingConstants.BamProperties.BAM_PASSWORD
                             .equals(element.getLocalName())) {
-                        config.setBamPassword(element.getText());
+                        secretAlias = LoggingConstants.CassandraConfigProperties.SECRET_ALIAS_BAM_PASSWORD;
+                        if (secretResolver != null && secretResolver.isInitialized()
+                                && secretResolver.isTokenProtected(secretAlias)) {
+                            config.setBamPassword(secretResolver.resolve(secretAlias));
+                        } else {
+                            config.setBamPassword(element.getText());
+                        }
                     }
                     else if (LoggingConstants.HdfsProperties.HDFS_CONFIG
                             .equals(element.getLocalName())) {
