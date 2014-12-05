@@ -49,6 +49,8 @@ public final class LoggingConstants {
     public static final String LOG_CONSOLE_PATTERN = "log.console.pattern";
     public static final String LOG_MEMORY_PATTERN = "log.memory.pattern";
     public static final String MEMORY_APPENDER = "MemoryAppender";
+    public static final String LOG4J_APPENDER_LOGEVENT_PASSWORD = "Log4j.Appender.LOGEVENT.Password";
+    public static final String LOG4J_APPENDER_LOGEVENT_TRUSTSTOREPASSWORD = "Carbon.Security.TrustStore.Password";
 
     // global system settings
     public static final String SYSTEM_LOG_LEVEL = "wso2carbon.system.log.level";

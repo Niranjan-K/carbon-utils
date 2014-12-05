@@ -47,19 +47,17 @@ import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.logging.TenantAwareLoggingEvent;
 import org.wso2.carbon.utils.logging.TenantAwarePatternLayout;
 import org.wso2.carbon.utils.logging.handler.TenantDomainSetter;
+import org.wso2.securevault.SecretResolver;
+import org.wso2.securevault.SecretResolverFactory;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -81,6 +79,7 @@ public class LogEventAppender extends AppenderSkeleton implements Appender, Logg
     private String streamDef;
     private String trustStorePassword;
     private String truststorePath;
+    private static SecretResolver secretResolver;
 
     public LogEventAppender() {
         init();
@@ -92,6 +91,29 @@ public class LogEventAppender extends AppenderSkeleton implements Appender, Logg
     public void init() {
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
         scheduler.scheduleWithFixedDelay(new LogPublisherTask(), 10, 10, TimeUnit.MILLISECONDS);
+        String log4jPath = CarbonUtils.getCarbonHome() + File.separator + "repository" + File.separator + "conf" +
+                File.separator + "log4j.properties";
+        File log4jProperties = new File(log4jPath);
+        FileInputStream fileInputStream = null;
+        if (log4jProperties.exists()) {
+            try {
+                fileInputStream = new FileInputStream(log4jProperties);
+                Properties properties = new Properties();
+                properties.load(fileInputStream);
+                secretResolver = SecretResolverFactory.create(properties);
+            } catch (IOException e) {
+                System.err.println("Unable to read log4j.properties");
+                e.printStackTrace();
+            } finally {
+                if (fileInputStream != null) {
+                    try {
+                        fileInputStream.close();
+                    } catch (IOException e) {
+                        System.err.println("Failed to close the FileInputStream, file: " + log4jPath);
+                    }
+                }
+            }
+        }
     }
 
     private String getCurrentServerName() {
@@ -195,7 +217,7 @@ public class LogEventAppender extends AppenderSkeleton implements Appender, Logg
     }
 
     public void setPassword(String password) {
-        this.password = password;
+        this.password = decrypt(password, LoggingConstants.LOG4J_APPENDER_LOGEVENT_PASSWORD);
     }
 
     public String getUserName() {
@@ -243,15 +265,30 @@ public class LogEventAppender extends AppenderSkeleton implements Appender, Logg
     }
 
     public void setTrustStorePassword(String trustStorePassword) {
-	this.trustStorePassword = trustStorePassword;
+        this.trustStorePassword = decrypt(trustStorePassword,
+                LoggingConstants.LOG4J_APPENDER_LOGEVENT_TRUSTSTOREPASSWORD);
     }
 
     public String getTruststorePath() {
-	return truststorePath;
+	    return truststorePath;
     }
 
     public void setTruststorePath(String truststorePath) {
-	this.truststorePath = truststorePath;
+	    this.truststorePath = truststorePath;
+    }
+
+    private static String decrypt(String value, String alias) {
+        String decryptedValue = "";
+        if (secretResolver != null && secretResolver.isInitialized()) {
+            if (secretResolver.isTokenProtected(alias)) {
+                decryptedValue = secretResolver.resolve(alias);
+            } else {
+                decryptedValue = value;
+            }
+        } else {
+	        decryptedValue = value;
+        }
+        return decryptedValue;
     }
 
     private final class LogPublisherTask implements Runnable {
